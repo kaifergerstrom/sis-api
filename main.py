@@ -2,7 +2,13 @@ from bs4 import BeautifulSoup, SoupStrainer
 import requests
 import collections
 import json
+import argparse
 
+# Argparser for username input
+parser = argparse.ArgumentParser(description='Input SIS Information')
+parser.add_argument('--username', dest='username', type=str, help='SIS Student Username')
+parser.add_argument('--password', dest='password', type=str, help='SIS Student Password')
+args = parser.parse_args()
 
 def get_grade_links(soup):  # Ugly function to compile all the links to other quarters into an dictionary
 	quarters = {}
@@ -12,10 +18,10 @@ def get_grade_links(soup):  # Ugly function to compile all the links to other qu
 	quarters[selected.text] = gradebook_page.split("/")[-1]
 	return quarters
 
+
 # Links for pages in SIS
 login_page = "https://sisstudent.fcps.edu/SVUE/"
 gradebook_page = "https://sisstudent.fcps.edu/SVUE/PXP_Gradebook.aspx?AGU=0"
-
 
 with requests.Session() as s:  # Create a requests session
 
@@ -24,8 +30,8 @@ with requests.Session() as s:  # Create a requests session
 
 	# Prepare the data to post to the login form (apsx)
 	data = {}
-	data['username'] = input("SIS Username: ")
-	data['password'] = input("SIS Password: ")
+	data['username'] = args.username
+	data['password'] = args.password
 	data["__VIEWSTATE"] = login_soup.select_one("#__VIEWSTATE")["value"]
 	data["__VIEWSTATEGENERATOR"] = login_soup.select_one("#__VIEWSTATEGENERATOR")["value"]
 	data["__EVENTVALIDATION"] = login_soup.select_one('#__EVENTVALIDATION')['value']
@@ -66,6 +72,22 @@ with requests.Session() as s:  # Create a requests session
 
 			courses[key][course["period"]] = course
 
+	def get_grades(period):
+		grades = {}
+		for quarter, classes in courses.items():
+			grades[quarter] = classes[str(period)]['grades']
+		return grades
+
+	formatted = {}
+	for quarter, classes in courses.items():
+		for period, data in classes.items():
+			formatted[period] = data
+
+	for period, data in formatted.items():
+		formatted[period]['grades'] = get_grades(period)
+
 	with open('courses.json', 'w+') as outfile:  # Save formatted json file
-		json.dump(courses, outfile, indent=4)
+		json.dump(formatted, outfile, indent=4)
 		print('Finished and saved to "courses.json"')
+
+
