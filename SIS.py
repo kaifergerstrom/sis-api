@@ -28,7 +28,7 @@ class SIS:
 		return courses
 
 SIS = SIS()
-print(SIS.get_courses())
+print(SIS.get_teachers())
 
 
 
